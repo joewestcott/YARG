@@ -71,6 +71,10 @@ namespace YARG.Gameplay.Player
         public float ZeroFadePosition { get; private set; }
         public float FadeSize         { get; private set; }
 
+        [field: Header("Star Power Trim Effect")]
+        [SerializeField]
+        protected StarPowerEffectElement StarPowerEffect;
+
         // Multiply by the reciprocal of 1 / player count to prevent the HUD from being too close to the highway;
         public Vector2 HUDTopElementViewportPosition =>
             TrackCamera.WorldToViewportPoint(_hudLocation.position.WithY(
@@ -123,6 +127,10 @@ namespace YARG.Gameplay.Player
             var change = ZeroFadePosition - DEFAULT_ZERO_FADE_POS;
             _hudLocation.position = _hudLocation.position.AddZ(change);
 
+            // Must be done after the HUD location is set
+            StarPowerEffect.Initialize();
+            StarPowerEffect.gameObject.SetActive(false);
+
             // Determine if a track is bass or not for the BASS GROOVE text notification
             IsBass = Player.Profile.CurrentInstrument
                 is Instrument.FiveFretBass
@@ -157,7 +165,7 @@ namespace YARG.Gameplay.Player
 
         public override BaseEngine BaseEngine => Engine;
 
-        protected List<TNote> Notes { get; private set; }
+        protected List<TNote> Notes { get; set; }
 
         protected int NoteIndex { get; private set; }
 
@@ -415,6 +423,12 @@ namespace YARG.Gameplay.Player
             if (stats.IsStarPowerActive && !_wasStarPowerActive && !_didLowerTrack)
             {
                 CameraPositioner.Scoop();
+            }
+
+            if (SettingsManager.Settings.EnableTrackEffects.Value && currentStarPowerAmount > _previousStarPowerAmount)
+            {
+                StarPowerEffect.gameObject.SetActive(true);
+                StarPowerEffect.PlayAnimation();
             }
 
             _previousStarPowerAmount = currentStarPowerAmount;
@@ -826,6 +840,11 @@ namespace YARG.Gameplay.Player
         protected virtual void OnCountdownChange(double countdownLength, double endTime)
         {
             TrackView.UpdateCountdown(countdownLength, endTime);
+        }
+
+        protected virtual void OnStarPowerPhraseMissed(TNote note)
+        {
+            OnStarPowerPhraseMissed();
         }
 
         protected virtual void OnStarPowerPhraseHit(TNote note)
